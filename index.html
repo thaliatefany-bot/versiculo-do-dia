@@ -24,7 +24,7 @@
     color: var(--ink);
   }
   button { font: inherit; color: inherit; cursor: pointer; }
-  .card { width: 100%; max-width: 620px; background: var(--sage-wash); border: 1.5px solid var(--sage-line); border-radius: 28px; padding: 22px 24px 20px; }
+  .card { width: 100%; max-width: 620px; background: var(--sage-wash); border: 1.5px solid var(--sage-line); border-radius: 28px; padding: 18px 22px 16px; }
 
   .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .hello { display: flex; align-items: center; gap: 10px; color: var(--sage); font-style: italic; font-size: 18px; min-width: 0; }
@@ -34,18 +34,18 @@
   .icon:hover { background: var(--sage-pill); }
   .icon svg { width: 15px; height: 15px; }
 
-  h1 { margin-top: 22px; font-size: clamp(34px, 8vw, 44px); line-height: 1.1; letter-spacing: -.01em; font-weight: 300; }
+  h1 { margin-top: 14px; font-size: clamp(34px, 8vw, 44px); line-height: 1.1; letter-spacing: -.01em; font-weight: 300; }
   .meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; font-size: 15px; }
   .meta b { font-weight: 600; }
   .meta span { color: var(--muted); }
 
-  .verse { margin-top: 18px; background: var(--sage-pill); border-radius: 18px; padding: 16px 18px; font-size: 16px; line-height: 1.55; }
+  .verse { margin-top: 14px; background: var(--sage-pill); border-radius: 18px; padding: 16px 18px; font-size: 16px; line-height: 1.55; }
   .verse .ref { display: block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--sage-deep); letter-spacing: .03em; }
   .verse-actions { margin-top: 12px; }
   .chip { background: #fff; border: 1.5px solid var(--sage-line); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--sage-deep); }
   .chip:hover { border-color: var(--sage); }
   .chip.on { background: var(--sage); border-color: var(--sage); color: #fff; }
-  .foot { margin-top: 14px; font-size: 14px; line-height: 1.45; font-style: italic; color: var(--muted); }
+  .foot { margin-top: 10px; font-size: 14px; line-height: 1.45; font-style: italic; color: var(--muted); }
 
   .panel-title { color: var(--sage); font-style: italic; font-size: 18px; display: flex; align-items: center; gap: 10px; }
   .panel-title svg { width: 20px; height: 20px; }
@@ -207,6 +207,7 @@
     const f = FRASES[dayNumber % FRASES.length];
     $('frase').textContent = '“' + f.text + '”' + (f.author ? ' — ' + f.author : '');
     updateSaveButton();
+    if (typeof fit === 'function') fit();
   }
 
   function updateSaveButton() {
@@ -261,24 +262,37 @@
   $('btn-back').addEventListener('click', () => showView('main'));
 
   // ---------- Ajuste de tamanho ----------
-  const BASE_W = 560;
+  // Testa vários formatos do cartão (de estreito/alto a largo/baixo) e fica com aquele
+  // que, depois de encolhido para caber no bloco, deixa o texto MAIOR. Nada é cortado.
   function fit() {
     const card = $('card'), stage = $('stage');
     const inSaved = !$('view-saved').hidden;
     document.body.classList.toggle('scroll', inSaved);
     card.style.transform = 'none';
-    const w = BASE_W, h = card.offsetHeight;
-    const vw = document.documentElement.clientWidth - 16;
-    const vh = document.documentElement.clientHeight - 16;
-    let sc = vw / w;                               // sempre cabe na largura
-    if (!inSaved) sc = Math.min(sc, vh / h);        // na tela principal, cabe também na altura
-    sc = Math.max(0.2, Math.min(sc, inSaved ? 1 : 1.25));
-    stage.style.width = (w * sc) + 'px';
+    const vw = Math.max(60, document.documentElement.clientWidth - 16);
+    const vh = Math.max(60, document.documentElement.clientHeight - 16);
+    let best = null;
+    if (inSaved) {
+      const W = Math.min(560, Math.max(300, vw));
+      card.style.width = W + 'px';
+      best = { W: W, h: card.offsetHeight, sc: Math.min(vw / W, 1.25) };
+    } else {
+      for (let W = 300; W <= 780; W += 20) {
+        card.style.width = W + 'px';
+        const h = card.offsetHeight;
+        const sc = Math.min(vw / W, vh / h);
+        if (!best || sc > best.sc + 0.002) best = { W: W, h: h, sc: sc };
+      }
+      best.sc = Math.min(best.sc, 1.5);
+    }
+    card.style.width = best.W + 'px';
+    const h = card.offsetHeight;
+    const sc = Math.max(0.2, best.sc);
+    stage.style.width = (best.W * sc) + 'px';
     stage.style.height = (h * sc) + 'px';
     card.style.transform = 'scale(' + sc + ')';
   }
   window.addEventListener('resize', fit);
-  if (window.ResizeObserver) new ResizeObserver(fit).observe($('card'));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 
   render();
