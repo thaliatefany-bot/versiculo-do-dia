@@ -57,10 +57,17 @@
   .item .rm:hover { color: var(--sage-deep); }
   .empty { margin-top: 16px; font-size: 14px; color: var(--muted); font-style: italic; }
   .warn { margin-top: 12px; font-size: 12px; color: #a0702a; }
+
+  /* Escala automática: o cartão é desenhado em 560px e encolhe/ajusta ao tamanho do bloco */
+  html, body { height: 100%; }
+  body { height: 100vh; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  body.scroll { height: auto; min-height: 100vh; align-items: flex-start; overflow: visible; }
+  #stage { position: relative; flex: none; }
+  .card { position: absolute; left: 0; top: 0; width: 560px; max-width: none; transform-origin: 0 0; }
 </style>
 </head>
 <body>
-<main class="card">
+<div id="stage"><main class="card" id="card">
 
   <section id="view-main">
     <div class="top">
@@ -95,7 +102,7 @@
     <div class="warn" id="warn-saved" hidden>Este navegador não está guardando dados: seus salvos podem se perder ao fechar a página.</div>
   </section>
 
-</main>
+</main></div>
 
 <script>
   const NOME = 'Estéfany';   // para mudar o nome na saudação, edite aqui
@@ -225,6 +232,7 @@
   function showView(name) {
     $('view-main').hidden = name !== 'main';
     $('view-saved').hidden = name !== 'saved';
+    fit();
   }
   function renderSaved() {
     const box = $('saved-list');
@@ -252,7 +260,29 @@
   $('btn-saved').addEventListener('click', () => { renderSaved(); showView('saved'); });
   $('btn-back').addEventListener('click', () => showView('main'));
 
+  // ---------- Ajuste de tamanho ----------
+  const BASE_W = 560;
+  function fit() {
+    const card = $('card'), stage = $('stage');
+    const inSaved = !$('view-saved').hidden;
+    document.body.classList.toggle('scroll', inSaved);
+    card.style.transform = 'none';
+    const w = BASE_W, h = card.offsetHeight;
+    const vw = document.documentElement.clientWidth - 16;
+    const vh = document.documentElement.clientHeight - 16;
+    let sc = vw / w;                               // sempre cabe na largura
+    if (!inSaved) sc = Math.min(sc, vh / h);        // na tela principal, cabe também na altura
+    sc = Math.max(0.2, Math.min(sc, inSaved ? 1 : 1.25));
+    stage.style.width = (w * sc) + 'px';
+    stage.style.height = (h * sc) + 'px';
+    card.style.transform = 'scale(' + sc + ')';
+  }
+  window.addEventListener('resize', fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe($('card'));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
   render();
+  fit();
   setInterval(render, 30000);
 </script>
 </body>
